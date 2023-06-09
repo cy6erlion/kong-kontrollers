@@ -1,0 +1,15 @@
+[package]
+name = "kong_kontrollers"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+accounts = []
+login = ["accounts"]
+properties = ["login"]
+
+[dependencies]
+kong = { path = "../kong/"}
+serde.workspace = true
+rusqlite.workspace = true
+chrono.workspace = true
