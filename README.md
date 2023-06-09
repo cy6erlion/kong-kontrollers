@@ -11,7 +11,7 @@
 
 `kong` HTTP request __kontrollers__
 
-## 🧩 Components
+## 🎮 Kontrollers
 
 - 👥 `accounts`: __kontroller__ used for user account management.
 - 🔓 `login`: __kontroller__ that allows an user account to login (user sessions)
