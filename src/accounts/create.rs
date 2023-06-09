@@ -15,7 +15,7 @@
 use super::database::Database;
 use super::{Account, AccountCreationInput, PublicAccount};
 use crate::error::KontrollerError;
-use kong::{inputs::UserInput, server, ErrorResponse, JsonError, JsonValue, Kong, Kontrol, Method};
+use kong::{inputs::UserInput, server, ErrorResponse, JsonValue, Kong, Kontrol, Method};
 use std::sync::{Arc, Mutex};
 
 /// ## ✨ Accounts creation kontroller
