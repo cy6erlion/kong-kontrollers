@@ -167,7 +167,7 @@ impl Kontrol for LoginKontroller {
                                         // Password correct, create cookie based sessions
                                         LoginKontroller::cookie_auth(
                                             account,
-                                            &kong.config.host,
+                                            &kong.config.hostname,
                                             &kong.config.secret_key,
                                             &kong.config.auth_cookie_name,
                                         )
