@@ -6,7 +6,6 @@ edition = "2021"
 [features]
 accounts = []
 login = ["accounts"]
-properties = ["login"]
 
 [dependencies]
 kong = { path = "../kong/"}
