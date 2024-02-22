@@ -7,7 +7,9 @@
 
 use super::database::Database;
 use super::{BlogPost, CreateBlogInput};
+use crate::accounts::database::Database as AccountsDatabase;
 use crate::error::KontrollerError;
+use crate::login::is_admin;
 use kong::{inputs::UserInput, server, ErrorResponse, JsonValue, Kong, Kontrol, Method};
 use std::sync::{Arc, Mutex};
 
@@ -19,6 +21,8 @@ pub struct CreateBlogPostKontroller {
     pub method: Method,
     /// SQLite database handle
     pub database: Arc<Mutex<Database>>,
+    /// Accounts database
+    pub accounts_database: Arc<Mutex<AccountsDatabase>>,
 }
 
 impl CreateBlogPostKontroller {
@@ -37,7 +41,7 @@ impl CreateBlogPostKontroller {
         } else {
             "".to_string()
         };
-        let timestamp = chrono::Utc::now().timestamp();
+        Let Timestamp = chrono::Utc::now().timestamp();
         let file = format!("{directory}/{timestamp}-{photo_name}");
 
         // Store photo in directory
@@ -117,25 +121,37 @@ impl Kontrol for CreateBlogPostKontroller {
     }
     /// Add blog
     fn kontrol(&self, kong: &Kong) -> server::Response {
-        if let Some(input) = &kong.input {
-            let input = CreateBlogInput::from_json_str(input.to_string());
+        if let Some(k) = &kong.kpassport {
+            if let Ok(admin) = is_admin(k, self.accounts_database.clone()) {
+                if admin {
+                    if let Some(input) = &kong.input {
+                        let input = CreateBlogInput::from_json_str(input.to_string());
 
-            // Derive blog from string
-            let blog: BlogPost = if let Ok(input) = input {
-                input.into()
+                        // Derive blog from string
+                        let blog: BlogPost = if let Ok(input) = input {
+                            input.into()
+                        } else {
+                            return ErrorResponse::bad_request();
+                        };
+
+                        // Store blog into the database
+                        let res = self.database.lock().unwrap().create_blog(&blog);
+
+                        match res {
+                            Ok(()) => server::Response::json(&blog).with_status_code(201),
+                            Err(err) => match err {
+                                KontrollerError::DbField => ErrorResponse::bad_request(),
+                                _ => ErrorResponse::internal(),
+                            },
+                        }
+                    } else {
+                        ErrorResponse::unauthorized()
+                    }
+                } else {
+                    ErrorResponse::unauthorized()
+                }
             } else {
-                return ErrorResponse::bad_request();
-            };
-
-            // Store blog into the database
-            let res = self.database.lock().unwrap().create_blog(&blog);
-
-            match res {
-                Ok(()) => server::Response::json(&blog).with_status_code(201),
-                Err(err) => match err {
-                    KontrollerError::DbField => ErrorResponse::bad_request(),
-                    _ => ErrorResponse::internal(),
-                },
+                ErrorResponse::internal()
             }
         } else {
             ErrorResponse::unauthorized()
