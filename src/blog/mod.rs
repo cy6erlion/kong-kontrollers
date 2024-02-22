@@ -14,8 +14,11 @@
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
 
-mod database;
-mod inputs;
+pub use inputs::CreateBlogInput;
+
+pub mod create;
+pub mod database;
+pub mod inputs;
 
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
 pub struct BlogPost {
@@ -33,4 +36,20 @@ pub struct BlogPost {
     pub content: String,
     /// The date when the blog post was published
     pub date: Option<DateTime<Utc>>,
+}
+
+impl From<CreateBlogInput> for BlogPost {
+    fn from(value: CreateBlogInput) -> Self {
+        BlogPost {
+            title: value.title,
+            subtitle: value.subtitle,
+            overview: value.overview,
+            author: value.author,
+            cover: value.cover,
+            content: value.content,
+            // TODO: don't hardcode this, allow to use date from
+            // user input
+            date: Some(Utc::now()),
+        }
+    }
 }
