@@ -14,10 +14,39 @@
 pub mod inputs;
 
 use crate::accounts::{database::Database, Account};
+use crate::error::KontrollerError;
 use inputs::AccountLoginInput;
+use kong::krypto::kpassport::Kpassport;
 use kong::{inputs::UserInput, krypto, server, ErrorResponse, JsonValue, Kong, Kontrol, Method};
 use serde::Serialize;
 use std::sync::{Arc, Mutex};
+
+pub fn is_admin(k: &Kpassport, db: Arc<Mutex<Database>>) -> Result<bool, KontrollerError> {
+    let username = &k.content.username;
+
+    // Find user account in database
+    let account = db
+        .lock()
+        .unwrap()
+        .private_get_account_by_username(&username);
+
+    match account {
+        // check account result
+        Ok(account) => {
+            // Check if an account was found
+            if let Some(account) = account {
+                if let Some(at) = account.account_type {
+                    match at.as_str() {
+                        "admin" => return Ok(true),
+                        _ => return Ok(false),
+                    }
+                }
+            }
+            Ok(false)
+        }
+        Err(err) => Err(err),
+    }
+}
 
 /// Login accounts API endpoint handler
 pub struct LoginKontroller {
