@@ -23,6 +23,8 @@ pub enum KontrollerError {
     PasswordVerifyHash,
     /// Configuration error
     ConfigError,
+    /// Kpassport error
+    Kpassport,
 }
 
 impl std::error::Error for KontrollerError {}
@@ -41,6 +43,7 @@ impl fmt::Display for KontrollerError {
             Self::PasswordHashing => write!(f, "Could not hash password"),
             Self::PasswordVerifyHash => write!(f, "Could not verify password hash"),
             Self::ConfigError => write!(f, "Could not read config file"),
+            Self::Kpassport => write!(f, "Kpassport Error"),
         }
     }
 }
