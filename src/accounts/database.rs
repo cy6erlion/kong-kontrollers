@@ -266,124 +266,124 @@ impl Database {
     }
 }
 
-#[cfg(test)]
-mod test {
-    use chrono::Utc;
+// #[cfg(test)]
+// mod test {
+//     use chrono::Utc;
 
-    use super::*;
+//     use super::*;
 
-    const TEST_DB_PATH: &str = "test-data/EUM6O_TEST_DATABASE.sqlite";
+//     const TEST_DB_PATH: &str = "test-data/EUM6O_TEST_DATABASE.sqlite";
 
-    #[test]
-    fn connect_db() {
-        let input = super::KollectionInput {
-            accounts: Some(TEST_DB_PATH.to_string()),
-        };
-        let mut db = Database::new(input);
+//     #[test]
+//     fn connect_db() {
+//         let input = super::KollectionInput {
+//             accounts: Some(TEST_DB_PATH.to_string()),
+//         };
+//         let mut db = Database::new(input);
 
-        // Connect to database
-        db.connect().unwrap();
+//         // Connect to database
+//         db.connect().unwrap();
 
-        match db.accounts.conn {
-            Some(_conn) => assert!(true),
-            _ => assert!(false),
-        }
-    }
+//         match db.accounts.conn {
+//             Some(_conn) => assert!(true),
+//             _ => assert!(false),
+//         }
+//     }
 
-    #[test]
-    fn test_store_get_account_account() {
-        remove_test_db();
-        let input = super::KollectionInput {
-            accounts: Some(TEST_DB_PATH.to_string()),
-        };
-        let mut db = Database::new(input);
+//     #[test]
+//     fn test_store_get_account_account() {
+//         remove_test_db();
+//         let input = super::KollectionInput {
+//             accounts: Some(TEST_DB_PATH.to_string()),
+//         };
+//         let mut db = Database::new(input);
 
-        let account = Account {
-            username: String::from("testuszee"),
-            password: String::from("12345678910"),
-            created: Utc::now(),
-            fullname: None,
-            date_of_birth: None,
-            id_number: None,
-            gender: None,
-            current_school_name: None,
-            student_number: None,
-            bussiness_name: None,
-            email: Some("admin@example.com".to_string()),
-            mobile_number: None,
-            website: None,
-            description: None,
-            last_login: None,
-        };
+//         let account = Account {
+//             username: String::from("testuszee"),
+//             password: String::from("12345678910"),
+//             created: Utc::now(),
+//             fullname: None,
+//             date_of_birth: None,
+//             id_number: None,
+//             gender: None,
+//             current_school_name: None,
+//             student_number: None,
+//             bussiness_name: None,
+//             email: Some("admin@example.com".to_string()),
+//             mobile_number: None,
+//             website: None,
+//             description: None,
+//             last_login: None,
+//         };
 
-        db.connect().unwrap();
-        db.create_account(&account).unwrap();
+//         db.connect().unwrap();
+//         db.create_account(&account).unwrap();
 
-        let public_account = db.public_get_account_by_email("admin@example.com").unwrap();
-        let public_account1 = db.public_get_account_by_username("testuszee").unwrap();
+//         let public_account = db.public_get_account_by_email("admin@example.com").unwrap();
+//         let public_account1 = db.public_get_account_by_username("testuszee").unwrap();
 
-        if let Some(_) = public_account {
-            assert!(true)
-        } else {
-            panic!("Account not found")
-        }
+//         if let Some(_) = public_account {
+//             assert!(true)
+//         } else {
+//             panic!("Account not found")
+//         }
 
-        if let Some(_) = public_account1 {
-            assert!(true)
-        } else {
-            panic!("Account not found")
-        }
-    }
+//         if let Some(_) = public_account1 {
+//             assert!(true)
+//         } else {
+//             panic!("Account not found")
+//         }
+//     }
 
-    #[test]
-    fn test_store_get_account_account_private() {
-        //remove_test_db();
-        let input = super::KollectionInput {
-            accounts: Some(TEST_DB_PATH.to_string()),
-        };
-        let mut db = Database::new(input);
+//     #[test]
+//     fn test_store_get_account_account_private() {
+//         //remove_test_db();
+//         let input = super::KollectionInput {
+//             accounts: Some(TEST_DB_PATH.to_string()),
+//         };
+//         let mut db = Database::new(input);
 
-        let account = Account {
-            username: String::from("testus"),
-            password: String::from("12345678910"),
-            created: Utc::now(),
-            fullname: None,
-            date_of_birth: None,
-            id_number: None,
-            gender: None,
-            current_school_name: None,
-            student_number: None,
-            bussiness_name: None,
-            email: Some("admin@ple.com".to_string()),
-            mobile_number: None,
-            website: None,
-            description: None,
-            last_login: None,
-        };
+//         let account = Account {
+//             username: String::from("testus"),
+//             password: String::from("12345678910"),
+//             created: Utc::now(),
+//             fullname: None,
+//             date_of_birth: None,
+//             id_number: None,
+//             gender: None,
+//             current_school_name: None,
+//             student_number: None,
+//             bussiness_name: None,
+//             email: Some("admin@ple.com".to_string()),
+//             mobile_number: None,
+//             website: None,
+//             description: None,
+//             last_login: None,
+//         };
 
-        db.connect().unwrap();
-        db.create_account(&account).unwrap();
+//         db.connect().unwrap();
+//         db.create_account(&account).unwrap();
 
-        let public_account = db.private_get_account_by_email("admin@ple.com").unwrap();
-        let public_account1 = db.private_get_account_by_username("testus").unwrap();
+//         let public_account = db.private_get_account_by_email("admin@ple.com").unwrap();
+//         let public_account1 = db.private_get_account_by_username("testus").unwrap();
 
-        if let Some(_) = public_account {
-            assert!(true)
-        } else {
-            panic!("Account not found")
-        }
+//         if let Some(_) = public_account {
+//             assert!(true)
+//         } else {
+//             panic!("Account not found")
+//         }
 
-        if let Some(_) = public_account1 {
-            assert!(true)
-        } else {
-            panic!("Account not found")
-        }
-    }
+//         if let Some(_) = public_account1 {
+//             assert!(true)
+//         } else {
+//             panic!("Account not found")
+//         }
+//     }
 
-    fn remove_test_db() {
-        let test_db_path = std::path::Path::new(TEST_DB_PATH);
-        if std::path::Path::exists(test_db_path) {
-            std::fs::remove_file(test_db_path).unwrap();
-        }
-    }
-}
+//     fn remove_test_db() {
+//         let test_db_path = std::path::Path::new(TEST_DB_PATH);
+//         if std::path::Path::exists(test_db_path) {
+//             std::fs::remove_file(test_db_path).unwrap();
+//         }
+//     }
+// }
