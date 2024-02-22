@@ -9,10 +9,10 @@ use kong::{
     validate::{Validate, ValidationError},
     JsonError, JsonValue,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// Account authentication input
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct AccountLoginInput {
     /// Account's username
     pub username: String,

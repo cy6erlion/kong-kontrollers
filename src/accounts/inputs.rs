@@ -8,12 +8,12 @@ use kong::{
     validate::{Validate, ValidationError},
     JsonError, JsonValue,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// ## ⌨️ Account creation input
 ///
 /// Data used as input to create a new account.
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct AccountCreationInput {
     /// Account's username
     pub username: String,
