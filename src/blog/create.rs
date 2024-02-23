@@ -41,7 +41,7 @@ impl CreateBlogPostKontroller {
         } else {
             "".to_string()
         };
-        Let Timestamp = chrono::Utc::now().timestamp();
+        let timestamp = chrono::Utc::now().timestamp();
         let file = format!("{directory}/{timestamp}-{photo_name}");
 
         // Store photo in directory
