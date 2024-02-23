@@ -16,3 +16,4 @@
 - 👥 `accounts`: __kontroller__ used for user account management.
 - 🔓 `login`: __kontroller__ that allows an user account to login (user sessions)
 - 📑 `blog`: __kontroller__ for managing a blog
+- 🗞️ `newsletter`: __kontroller__ for managing a newsletter

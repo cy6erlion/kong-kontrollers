@@ -5,3 +5,5 @@ pub mod blog;
 pub mod error;
 #[cfg(feature = "login")]
 pub mod login;
+#[cfg(feature = "newsletter")]
+pub mod newsletter;
