@@ -18,9 +18,9 @@ impl ContactMessageInput {
     /// new generic resource
     pub fn as_json(&self) -> JsonValue {
         json!({
-        "name": self.name,
+            "name": self.name,
             "email": self.email,
-        "message": self.message
+            "message": self.message
         })
     }
 
