@@ -2,6 +2,8 @@
 pub mod accounts;
 #[cfg(feature = "blog")]
 pub mod blog;
+#[cfg(feature = "contact")]
+pub mod contact;
 pub mod error;
 #[cfg(feature = "login")]
 pub mod login;
