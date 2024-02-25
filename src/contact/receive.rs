@@ -28,16 +28,10 @@ impl Kontrol for ReceiveMessageKontroller {
     }
 
     fn get_input(&self, request: &server::Request) -> Option<JsonValue> {
-        if let Ok(input) = server::post_input!(request, {
-        name: String,
-            email: Option<String>,
-        message: String
-        }) {
-            let input = ContactMessageInput {
-                name: input.name,
-                email: input.email,
-                message: input.message,
-            };
+        let input: Result<ContactMessageInput, server::input::json::JsonError> =
+            server::input::json_input(request);
+
+        if let Ok(input) = input {
             Some(input.as_json())
         } else {
             None
