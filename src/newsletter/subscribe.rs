@@ -28,10 +28,10 @@ impl Kontrol for SubscribeNewsletterKontroller {
     }
 
     fn get_input(&self, request: &server::Request) -> Option<JsonValue> {
-        if let Ok(input) = server::post_input!(request, {
-            email: String,
-        }) {
-            let input = SubscribeNewsletterInput { email: input.email };
+        let input: Result<SubscribeNewsletterInput, server::input::json::JsonError> =
+            server::input::json_input(request);
+
+        if let Ok(input) = input {
             Some(input.as_json())
         } else {
             None
