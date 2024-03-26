@@ -1,6 +1,6 @@
-//! # ✨ Blog post creation kontroller
+//! # ✨ Edit article kontroller
 //!
-//! This __kontroller__ is used to post a new blog post
+//! This __kontroller__ is used to edit an existing article
 //! It gets the input from the HTTP request validates it
 //! and creates the blog post from the validated input. The blog post
 //! is stored in an SQLite database.
@@ -13,8 +13,8 @@ use crate::login::is_admin;
 use kong::{inputs::UserInput, server, ErrorResponse, JsonValue, Kong, Kontrol, Method};
 use std::sync::{Arc, Mutex};
 
-/// ✨ Create blog kontroller
-pub struct CreateBlogPostKontroller {
+/// ✨ Article update kontroller
+pub struct ArticleUpdateKontroller {
     /// Address to kontroller
     pub address: String,
     /// HTTP method supported by the kontroller
@@ -25,7 +25,7 @@ pub struct CreateBlogPostKontroller {
     pub accounts_database: Arc<Mutex<AccountsDatabase>>,
 }
 
-impl CreateBlogPostKontroller {
+impl ArticleUpdateKontroller {
     /// Store uploaded blog photos
     fn store_cover_photo(
         dir_name: &str,
@@ -55,7 +55,7 @@ impl CreateBlogPostKontroller {
     }
 }
 
-impl Kontrol for CreateBlogPostKontroller {
+impl Kontrol for ArticleUpdateKontroller {
     /// Endpoint's address
     fn address(&self) -> String {
         self.address.clone()
@@ -77,8 +77,7 @@ impl Kontrol for CreateBlogPostKontroller {
         }) {
             // store cover image
             if let Some(cover) = input.cover {
-                if let Ok(cover) = CreateBlogPostKontroller::store_cover_photo(&input.title, cover)
-                {
+                if let Ok(cover) = ArticleUpdateKontroller::store_cover_photo(&input.title, cover) {
                     let input = CreateBlogInput {
                         title: input.title,
                         subtitle: input.subtitle,
@@ -128,7 +127,7 @@ impl Kontrol for CreateBlogPostKontroller {
             Err(())
         }
     }
-    /// Add blog
+    /// Update article
     fn kontrol(&self, kong: &Kong) -> server::Response {
         if let Some(k) = &kong.kpassport {
             if let Ok(admin) = is_admin(k, self.accounts_database.clone()) {
@@ -143,15 +142,28 @@ impl Kontrol for CreateBlogPostKontroller {
                             return ErrorResponse::bad_request();
                         };
 
-                        // Store blog into the database
-                        let res = self.database.lock().unwrap().create_blog(&blog);
-
-                        match res {
-                            Ok(()) => server::Response::json(&blog).with_status_code(201),
-                            Err(err) => match err {
-                                KontrollerError::DbField => ErrorResponse::bad_request(),
-                                _ => ErrorResponse::internal(),
-                            },
+                        if let Some(url_params) = &kong.url_parameters {
+                            if let Some(id) = url_params.find("id") {
+                                if let Ok(id) = id.parse() {
+                                    // update article
+                                    let res = self.database.lock().unwrap().update(id, &blog);
+                                    match res {
+                                        Ok(()) => server::Response::text("").with_status_code(200),
+                                        Err(err) => match err {
+                                            KontrollerError::DbField => {
+                                                ErrorResponse::bad_request()
+                                            }
+                                            _ => ErrorResponse::internal(),
+                                        },
+                                    }
+                                } else {
+                                    ErrorResponse::bad_request()
+                                }
+                            } else {
+                                ErrorResponse::bad_request()
+                            }
+                        } else {
+                            ErrorResponse::bad_request()
                         }
                     } else {
                         ErrorResponse::unauthorized()

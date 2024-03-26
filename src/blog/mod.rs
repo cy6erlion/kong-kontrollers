@@ -18,10 +18,14 @@ pub use inputs::CreateBlogInput;
 
 pub mod create;
 pub mod database;
+pub mod delete;
+pub mod get;
+pub mod get_all;
 pub mod inputs;
+pub mod update;
 
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
-pub struct BlogPost {
+pub struct DatabaseBlogPostInput {
     /// The title of the blog post
     pub title: String,
     /// The subtitle of the blog post
@@ -38,9 +42,9 @@ pub struct BlogPost {
     pub date: Option<DateTime<Utc>>,
 }
 
-impl From<CreateBlogInput> for BlogPost {
+impl From<CreateBlogInput> for DatabaseBlogPostInput {
     fn from(value: CreateBlogInput) -> Self {
-        BlogPost {
+        DatabaseBlogPostInput {
             title: value.title,
             subtitle: value.subtitle,
             overview: value.overview,
@@ -52,4 +56,24 @@ impl From<CreateBlogInput> for BlogPost {
             date: Some(Utc::now()),
         }
     }
+}
+
+#[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
+pub struct BlogPost {
+    /// The Identifier of the blog post, the Rust Type is `i64`
+    pub id: i64,
+    /// The title of the blog post
+    pub title: String,
+    /// The subtitle of the blog post
+    pub subtitle: Option<String>,
+    /// The overview of the blog post
+    pub overview: Option<String>,
+    /// The username of the blog author
+    pub author: Option<String>,
+    /// The path to the cover image of the blog post
+    pub cover: Option<String>,
+    /// The actual content of the blog post
+    pub content: String,
+    /// The date when the blog post was published
+    pub date: Option<DateTime<Utc>>,
 }

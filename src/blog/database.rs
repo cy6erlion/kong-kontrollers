@@ -1,13 +1,13 @@
 //! # 🗄️ Blog posts database management
 
-use super::BlogPost;
+use super::{BlogPost, DatabaseBlogPostInput};
 use crate::error::KontrollerError;
 use rusqlite::{params, Connection};
 
 /// SQL statements and queries
 pub mod sql {
     /// Create user accounts table
-    pub const CREATE_BLOG_TABLE: &str = "
+    pub const CREATE_TABLE: &str = "
       CREATE TABLE IF NOT EXISTS blog (
         id INTEGER PRIMARY KEY,                      -- The Identifier of the blog post, the Rust Type is `i64`
         title TEXT NOT NULL,                         -- The title of the blog post
@@ -18,11 +18,8 @@ pub mod sql {
         content TEXT NOT NULL,                       -- The actual content of the blog post
         date TEXT)                                   -- The date when the blog post was published`";
 
-    /// Get blog by id
-    pub const GET_BLOG_BY_ID: &str = "SELECT * FROM blog WHERE id = :id;";
-
     /// Insert a blog post in the blog table
-    pub const CREATE_BLOG: &str = "
+    pub const CREATE: &str = "
       INSERT INTO blog (
         title,
         subtitle,
@@ -33,6 +30,26 @@ pub mod sql {
         date
        )
       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)";
+
+    /// Get blog by id
+    pub const READ: &str = "SELECT * FROM blog WHERE id = :id;";
+
+    /// Get all blog posts
+    pub const READ_ALL: &str = "SELECT * FROM blog ORDER BY rowid DESC";
+
+    /// Update article
+    pub const UPDATE: &str = "
+      UPDATE blog
+      SET title = ?1,
+        subtitle = ?2,
+        overview = ?3,
+        author = ?4,
+        cover = ?5,
+        content = ?6
+      WHERE id = ?7;";
+
+    /// Delete a blog post
+    pub const DELETE: &str = "DELETE FROM blog WHERE id = :id;";
 }
 
 /// Database management system
@@ -66,7 +83,7 @@ impl Database {
                     .transaction()
                     .map_err(|_| KontrollerError::DbTransaction)?;
 
-                tx.execute(sql::CREATE_BLOG_TABLE, ())
+                tx.execute(sql::CREATE_TABLE, ())
                     .map_err(|_| KontrollerError::DbTableCreation)?;
 
                 tx.commit().map_err(|_| KontrollerError::DbTableCreation)?;
@@ -78,11 +95,11 @@ impl Database {
     }
 
     /// Create a new blog
-    pub fn create_blog(&self, blog: &BlogPost) -> Result<(), KontrollerError> {
+    pub fn create_blog(&self, blog: &DatabaseBlogPostInput) -> Result<(), KontrollerError> {
         match &self.conn {
             Some(conn) => {
                 conn.execute(
-                    sql::CREATE_BLOG,
+                    sql::CREATE,
                     params![
                         &blog.title,
                         &blog.subtitle,
@@ -105,13 +122,14 @@ impl Database {
         match &self.conn {
             Some(conn) => {
                 let mut stmt = conn
-                    .prepare(sql::GET_BLOG_BY_ID)
+                    .prepare(sql::READ)
                     .map_err(|_| KontrollerError::DbSQL)?;
                 let mut rows = stmt
                     .query(&[(":id", &id)])
                     .map_err(|_| KontrollerError::DbSQL)?;
                 match rows.next().map_err(|_| KontrollerError::DbSQL)? {
                     Some(s) => Ok(Some(BlogPost {
+                        id: s.get(0).map_err(|_| KontrollerError::DbField)?,
                         title: s.get(1).map_err(|_| KontrollerError::DbField)?,
                         subtitle: s.get(2).map_err(|_| KontrollerError::DbField)?,
                         overview: s.get(3).map_err(|_| KontrollerError::DbField)?,
@@ -122,6 +140,117 @@ impl Database {
                     })),
                     None => Ok(None),
                 }
+            }
+            None => Err(KontrollerError::DbConnection),
+        }
+    }
+
+    /// Get all posts
+    pub fn get_all(&self) -> Result<Vec<BlogPost>, KontrollerError> {
+        match &self.conn {
+            Some(conn) => {
+                let mut posts: Vec<BlogPost> = vec![];
+                let mut stmt = conn
+                    .prepare(sql::READ_ALL)
+                    .map_err(|_| KontrollerError::DbSQL)?;
+                let posts_iter = stmt
+                    .query_map([], |row| {
+                        Ok(BlogPost {
+                            id: row.get(0).unwrap(),
+                            title: row.get(1).unwrap(), //.map_err(|_| KontrollerError::DbField)?,
+                            subtitle: row.get(2).unwrap(), //.map_err(|_| KontrollerError::DbField)?,
+                            overview: row.get(3).unwrap(), //.map_err(|_| KontrollerError::DbField)?,
+                            author: row.get(4).unwrap(), //.map_err(|_| KontrollerError::DbField)?,
+                            cover: row.get(5).unwrap(),  //.map_err(|_| KontrollerError::DbField)?,
+                            content: row.get(6).unwrap(), //.map_err(|_| KontrollerError::DbField)?,
+                            date: row.get(7).unwrap(),   //.map_err(|_| KontrollerError::DbField)?,
+                        })
+                    })
+                    .map_err(|_| KontrollerError::DbField)?;
+
+                for post in posts_iter {
+                    posts.push(post.unwrap());
+                }
+
+                Ok(posts)
+            }
+            None => Err(KontrollerError::DbConnection),
+        }
+    }
+
+    /// Delete article
+    pub fn delete(&self, id: i64) -> Result<(), KontrollerError> {
+        match &self.conn {
+            Some(conn) => {
+                conn.execute(sql::DELETE, &[(":id", &format!("{id}"))])
+                    .map_err(|_| KontrollerError::DbSQL)?;
+                Ok(())
+            }
+            None => Err(KontrollerError::DbConnection),
+        }
+    }
+
+    /// Update article
+    pub fn update(&mut self, id: i64, blog: &DatabaseBlogPostInput) -> Result<(), KontrollerError> {
+        match &mut self.conn {
+            Some(conn) => {
+                let tx = conn
+                    .transaction()
+                    .map_err(|_| KontrollerError::DbTransaction)?;
+
+                // Update title
+                tx.execute(
+                    "UPDATE blog SET title = ?1 WHERE id = ?2",
+                    &[&blog.title, &format!("{id}")],
+                )
+                .map_err(|_| KontrollerError::DbTableCreation)?;
+
+                // Update content
+                tx.execute(
+                    "UPDATE blog SET content = ?1 WHERE id = ?2",
+                    &[&blog.content, &format!("{id}")],
+                )
+                .map_err(|_| KontrollerError::DbTableCreation)?;
+
+                // Update subtitle
+                if let Some(subtitle) = &blog.subtitle {
+                    tx.execute(
+                        "UPDATE blog SET subtitle = ?1 WHERE id = ?2",
+                        &[subtitle, &format!("{id}")],
+                    )
+                    .map_err(|_| KontrollerError::DbTableCreation)?;
+                }
+
+                // Update overview
+                if let Some(overview) = &blog.overview {
+                    tx.execute(
+                        "UPDATE blog SET overview = ?1 WHERE id = ?2",
+                        &[overview, &format!("{id}")],
+                    )
+                    .map_err(|_| KontrollerError::DbTableCreation)?;
+                }
+
+                // Update author
+                if let Some(author) = &blog.author {
+                    tx.execute(
+                        "UPDATE blog SET author = ?1 WHERE id = ?2",
+                        &[author, &format!("{id}")],
+                    )
+                    .map_err(|_| KontrollerError::DbTableCreation)?;
+                }
+
+                // Update cover
+                if let Some(cover) = &blog.cover {
+                    tx.execute(
+                        "UPDATE blog SET cover = ?1 WHERE id = ?2",
+                        &[cover, &format!("{id}")],
+                    )
+                    .map_err(|_| KontrollerError::DbTableCreation)?;
+                }
+
+                tx.commit().map_err(|_| KontrollerError::DbTableCreation)?;
+
+                Ok(())
             }
             None => Err(KontrollerError::DbConnection),
         }
@@ -153,7 +282,7 @@ mod test {
         remove_test_db();
         let mut db = Database::new(TEST_DB_PATH);
 
-        let blog = BlogPost {
+        let blog = DatabaseBlogPostInput {
             title: "Test Title".to_string(),
             subtitle: Some("Test subtitle".to_string()),
             overview: Some("Test overview".to_string()),
