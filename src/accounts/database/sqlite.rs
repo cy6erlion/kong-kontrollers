@@ -1,6 +1,6 @@
 //! # 🗄️ Accounts database management
 //!
-use super::{Account, PublicAccount};
+use super::{Account, AccountDatabase, PublicAccount};
 use crate::error::KontrollerError;
 use rusqlite::{params, Connection};
 
@@ -17,9 +17,6 @@ pub mod sql {
         date_of_birth TEXT,                          -- The date when the account holder was born
         id_number TEXT,                              -- ID number of the account owner
         gender TEXT,                                 -- The gender of the account holder
-        current_school_name TEXT,                    -- User's current school name
-        student_number TEXT,                         -- User's student number
-        bussiness_name TEXT,                         -- Name of the account's bussiness        
         email TEXT UNIQUE,                           -- The email address of the account
         mobile_number TEXT,                          -- Account owner's mobile number
         website TEXT,                                -- Account owner's web-address
@@ -63,9 +60,9 @@ pub struct Database {
     conn: Option<Connection>,
 }
 
-impl Database {
+impl AccountDatabase for Database {
     /// Create a new database controller
-    pub fn new(path: &str) -> Self {
+    fn new(path: &str) -> Self {
         Database {
             path: path.to_string(),
             conn: None,
@@ -73,7 +70,7 @@ impl Database {
     }
 
     /// Open SQLite connection, create tables
-    pub fn connect(&mut self) -> Result<(), KontrollerError> {
+    fn connect(&mut self) -> Result<(), KontrollerError> {
         // Open database connection
         let conn =
             Connection::open(self.path.clone()).map_err(|_| KontrollerError::DbConnection)?;
@@ -98,7 +95,7 @@ impl Database {
     }
 
     /// Create a new account
-    pub fn create_account(&self, account: &Account) -> Result<(), KontrollerError> {
+    fn create_account(&self, account: &Account) -> Result<(), KontrollerError> {
         match &self.conn {
             Some(conn) => {
                 conn.execute(
@@ -118,7 +115,7 @@ impl Database {
     }
 
     /// Create a new admin account
-    pub fn create_admin_account(&self, account: &Account) -> Result<(), KontrollerError> {
+    fn create_admin_account(&self, account: &Account) -> Result<(), KontrollerError> {
         match &self.conn {
             Some(conn) => {
                 conn.execute(
@@ -140,7 +137,7 @@ impl Database {
     }
 
     /// Get an account's public data by its username
-    pub fn public_get_account_by_username(
+    fn public_get_account_by_username(
         &self,
         username: &str,
     ) -> Result<Option<PublicAccount>, KontrollerError> {
@@ -164,7 +161,7 @@ impl Database {
     }
 
     /// Get an account's public data by its email
-    pub fn public_get_account_by_email(
+    fn public_get_account_by_email(
         &self,
         email: &str,
     ) -> Result<Option<PublicAccount>, KontrollerError> {
@@ -188,7 +185,7 @@ impl Database {
     }
 
     /// Get an account's private data by its email
-    pub fn private_get_account_by_email(
+    fn private_get_account_by_email(
         &self,
         email: &str,
     ) -> Result<Option<Account>, KontrollerError> {
@@ -204,20 +201,17 @@ impl Database {
                     Some(s) => Ok(Some(Account {
                         username: s.get(1).map_err(|_| KontrollerError::DbField)?,
                         password: s.get(2).map_err(|_| KontrollerError::DbField)?,
-                        created: s.get(3).unwrap(), //.map_err(|_| KontrollerError::DbField)?,
+                        created: s.get(3).map_err(|_| KontrollerError::DbField)?,
                         fullname: s.get(4).map_err(|_| KontrollerError::DbField)?,
                         date_of_birth: s.get(5).map_err(|_| KontrollerError::DbField)?,
                         id_number: s.get(6).map_err(|_| KontrollerError::DbField)?,
                         gender: s.get(7).map_err(|_| KontrollerError::DbField)?,
-                        current_school_name: s.get(8).map_err(|_| KontrollerError::DbField)?,
-                        student_number: s.get(9).map_err(|_| KontrollerError::DbField)?,
-                        bussiness_name: s.get(10).map_err(|_| KontrollerError::DbField)?,
-                        email: s.get(11).map_err(|_| KontrollerError::DbField)?,
-                        mobile_number: s.get(12).map_err(|_| KontrollerError::DbField)?,
-                        website: s.get(13).map_err(|_| KontrollerError::DbField)?,
-                        description: s.get(14).map_err(|_| KontrollerError::DbField)?,
-                        last_login: s.get(15).map_err(|_| KontrollerError::DbField)?,
-                        account_type: s.get(16).map_err(|_| KontrollerError::DbField)?,
+                        email: s.get(8).map_err(|_| KontrollerError::DbField)?,
+                        mobile_number: s.get(9).map_err(|_| KontrollerError::DbField)?,
+                        website: s.get(10).map_err(|_| KontrollerError::DbField)?,
+                        description: s.get(11).map_err(|_| KontrollerError::DbField)?,
+                        last_login: s.get(12).map_err(|_| KontrollerError::DbField)?,
+                        account_type: s.get(13).map_err(|_| KontrollerError::DbField)?,
                     })),
                     None => Ok(None),
                 }
@@ -227,7 +221,7 @@ impl Database {
     }
 
     /// Get an account's private data by its username
-    pub fn private_get_account_by_username(
+    fn private_get_account_by_username(
         &self,
         username: &str,
     ) -> Result<Option<Account>, KontrollerError> {
@@ -248,9 +242,6 @@ impl Database {
                         date_of_birth: s.get(5).map_err(|_| KontrollerError::DbField)?,
                         id_number: s.get(6).map_err(|_| KontrollerError::DbField)?,
                         gender: s.get(7).map_err(|_| KontrollerError::DbField)?,
-                        current_school_name: s.get(8).map_err(|_| KontrollerError::DbField)?,
-                        student_number: s.get(9).map_err(|_| KontrollerError::DbField)?,
-                        bussiness_name: s.get(10).map_err(|_| KontrollerError::DbField)?,
                         email: s.get(11).map_err(|_| KontrollerError::DbField)?,
                         mobile_number: s.get(12).map_err(|_| KontrollerError::DbField)?,
                         website: s.get(13).map_err(|_| KontrollerError::DbField)?,
