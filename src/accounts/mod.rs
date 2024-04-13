@@ -24,14 +24,12 @@ use serde::{Deserialize, Serialize};
 /// > and password, __it should not be published publicly__.
 #[derive(Deserialize, Serialize)]
 pub struct Account {
-    //--- Required Data ---//
     /// Account's unique username
     pub username: String,
     /// Account's master key
     pub password: String,
     /// Date when account was created
     pub created: DateTime<Utc>,
-    //--- Optional Personal Data ---//
     /// The fullname of the account holder.
     pub fullname: Option<String>,
     /// The date when the account holder was born.
@@ -42,22 +40,12 @@ pub struct Account {
     pub gender: Option<String>,
     /// Short bio of Account
     pub description: Option<String>,
-    //--- Optional Education Data ---//
-    /// User's current school name
-    pub current_school_name: Option<String>,
-    /// User's student number
-    pub student_number: Option<String>,
-    //--- Optional Bussiness Data ---//
-    /// Name of the account's bussiness
-    pub bussiness_name: Option<String>,
-    //--- Optional Contact Data ---//
     /// User's email address
     pub email: Option<String>,
     /// Account owner's mobile number
     pub mobile_number: Option<String>,
     /// Account owner's web-address
     pub website: Option<String>,
-    //--- Optional Meta Data ---//
     /// Date account last logged in
     pub last_login: Option<DateTime<Utc>>,
     /// Type of account, eg `admin`
@@ -76,9 +64,6 @@ impl From<AccountCreationInput> for Account {
             date_of_birth: None,
             id_number: None,
             gender: None,
-            current_school_name: None,
-            student_number: None,
-            bussiness_name: None,
             email: input.email,
             mobile_number: None,
             website: None,
