@@ -7,14 +7,14 @@
 
 use super::database::Database;
 use super::{CreateBlogInput, DatabaseBlogPostInput};
-use crate::accounts::database::Database as AccountsDatabase;
+use crate::accounts::database::AccountDatabase;
 use crate::error::KontrollerError;
 use crate::login::is_admin;
 use kong::{inputs::UserInput, server, ErrorResponse, JsonValue, Kong, Kontrol, Method};
 use std::sync::{Arc, Mutex};
 
 /// ✨ Article update kontroller
-pub struct ArticleUpdateKontroller {
+pub struct ArticleUpdateKontroller<D: AccountDatabase> {
     /// Address to kontroller
     pub address: String,
     /// HTTP method supported by the kontroller
@@ -22,10 +22,10 @@ pub struct ArticleUpdateKontroller {
     /// SQLite database handle
     pub database: Arc<Mutex<Database>>,
     /// Accounts database
-    pub accounts_database: Arc<Mutex<AccountsDatabase>>,
+    pub accounts_database: Arc<Mutex<D>>,
 }
 
-impl ArticleUpdateKontroller {
+impl<D: AccountDatabase> ArticleUpdateKontroller<D> {
     /// Store uploaded blog photos
     fn store_cover_photo(
         dir_name: &str,
@@ -55,7 +55,7 @@ impl ArticleUpdateKontroller {
     }
 }
 
-impl Kontrol for ArticleUpdateKontroller {
+impl<D: AccountDatabase> Kontrol for ArticleUpdateKontroller<D> {
     /// Endpoint's address
     fn address(&self) -> String {
         self.address.clone()
@@ -77,7 +77,9 @@ impl Kontrol for ArticleUpdateKontroller {
         }) {
             // store cover image
             if let Some(cover) = input.cover {
-                if let Ok(cover) = ArticleUpdateKontroller::store_cover_photo(&input.title, cover) {
+                if let Ok(cover) =
+                    ArticleUpdateKontroller::<D>::store_cover_photo(&input.title, cover)
+                {
                     let input = CreateBlogInput {
                         title: input.title,
                         subtitle: input.subtitle,

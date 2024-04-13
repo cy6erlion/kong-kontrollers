@@ -1,13 +1,13 @@
 //! # Delete single article post kontroller
 
 use super::database::Database;
-use crate::accounts::database::Database as AccountsDatabase;
+use crate::accounts::database::AccountDatabase;
 use crate::login::is_admin;
 use kong::{server, ErrorResponse, Kong, Kontrol, Method};
 use std::sync::{Arc, Mutex};
 
 /// Delete a single posts kontroller
-pub struct DeleteArticleByIdKontroller {
+pub struct DeleteArticleByIdKontroller<D: AccountDatabase> {
     /// Address to kontroller
     pub address: String,
     /// HTTP method supported by the kontroller
@@ -15,10 +15,10 @@ pub struct DeleteArticleByIdKontroller {
     /// SQLite database handle
     pub database: Arc<Mutex<Database>>,
     /// Accounts database
-    pub accounts_database: Arc<Mutex<AccountsDatabase>>,
+    pub accounts_database: Arc<Mutex<D>>,
 }
 
-impl Kontrol for DeleteArticleByIdKontroller {
+impl<D: AccountDatabase> Kontrol for DeleteArticleByIdKontroller<D> {
     /// Endpoint's address
     fn address(&self) -> String {
         self.address.clone()

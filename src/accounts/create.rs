@@ -12,7 +12,7 @@
 //! database with it's `account_type` field as `admin`, from this
 //! you can build up your own higher level abstractions.
 
-use super::database::Database;
+use super::database::AccountDatabase;
 use super::{Account, AccountCreationInput, PublicAccount};
 use crate::error::KontrollerError;
 use kong::{inputs::UserInput, server, ErrorResponse, JsonValue, Kong, Kontrol, Method};
@@ -20,16 +20,16 @@ use std::sync::{Arc, Mutex};
 
 /// ## ✨ Accounts creation kontroller
 /// Can be used to create both admin and non-admin accounts
-pub struct CreateAccountKontroller {
+pub struct CreateAccountKontroller<D: AccountDatabase> {
     /// Address to kontroller (url path)
     pub address: String,
     /// HTTP method supported by the kontroller
     pub method: Method,
     /// SQLite database handle
-    pub database: Arc<Mutex<Database>>,
+    pub database: Arc<Mutex<D>>,
 }
 
-impl Kontrol for CreateAccountKontroller {
+impl<D: AccountDatabase> Kontrol for CreateAccountKontroller<D> {
     /// kontroller address
     fn address(&self) -> String {
         self.address.clone()

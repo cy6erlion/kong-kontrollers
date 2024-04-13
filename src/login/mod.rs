@@ -13,7 +13,7 @@
 //! `accounts` kontroller.
 pub mod inputs;
 
-use crate::accounts::{database::Database, Account};
+use crate::accounts::{database::AccountDatabase, Account};
 use crate::error::KontrollerError;
 use inputs::AccountLoginInput;
 use kong::krypto::kpassport::Kpassport;
@@ -21,7 +21,10 @@ use kong::{inputs::UserInput, krypto, server, ErrorResponse, JsonValue, Kong, Ko
 use serde::Serialize;
 use std::sync::{Arc, Mutex};
 
-pub fn is_admin(k: &Kpassport, db: Arc<Mutex<Database>>) -> Result<bool, KontrollerError> {
+pub fn is_admin<D: AccountDatabase>(
+    k: &Kpassport,
+    db: Arc<Mutex<D>>,
+) -> Result<bool, KontrollerError> {
     let username = &k.content.username;
 
     // Find user account in database
@@ -49,13 +52,13 @@ pub fn is_admin(k: &Kpassport, db: Arc<Mutex<Database>>) -> Result<bool, Kontrol
 }
 
 /// Login accounts API endpoint handler
-pub struct LoginKontroller {
+pub struct LoginKontroller<D: AccountDatabase> {
     pub address: String,
     pub method: Method,
-    pub database: Arc<Mutex<Database>>,
+    pub database: Arc<Mutex<D>>,
 }
 
-impl LoginKontroller {
+impl<D: AccountDatabase> LoginKontroller<D> {
     /// Issue kpassport using an HTTP cookie
     fn cookie_auth(
         account: Account,
@@ -127,7 +130,7 @@ impl LoginKontroller {
     }
 }
 
-impl Kontrol for LoginKontroller {
+impl<D: AccountDatabase> Kontrol for LoginKontroller<D> {
     /// Endpoint's address
     fn address(&self) -> String {
         self.address.clone()
@@ -194,7 +197,7 @@ impl Kontrol for LoginKontroller {
                                 Ok(password_verification) => {
                                     if password_verification {
                                         // Password correct, create cookie based sessions
-                                        LoginKontroller::cookie_auth(
+                                        LoginKontroller::<D>::cookie_auth(
                                             account,
                                             &kong.config.hostname,
                                             &kong.config.secret_key,
