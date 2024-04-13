@@ -13,5 +13,5 @@ contact = []
 [dependencies]
 kong = { path = "../kong/"}
 serde = { version = "1.0.144", features = ["derive"] } # A generic serialization/deserialization framework
-rusqlite = { version = "0.28.0", features = ["bundled", "chrono"]} #  Ergonomic wrapper for SQLite
+rusqlite = { version = "0.31.0", features = ["bundled", "chrono"]} #  Ergonomic wrapper for SQLite
 chrono = { version = "0.4.23", features = ["serde"]} # Date and time library
