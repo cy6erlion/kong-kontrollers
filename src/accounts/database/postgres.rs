@@ -1,6 +1,6 @@
 //! # 🗄️ Accounts database management
 //!
-use super::{sql, Account, AccountDatabase, PublicAccount};
+use super::{Account, AccountDatabase, PublicAccount};
 use crate::error::KontrollerError;
 use postgres::{Client, NoTls};
 
@@ -29,7 +29,16 @@ impl AccountDatabase for Database {
 
         client
             .batch_execute(
-                "CREATE TABLE IF NOT EXISTS public.accounts (
+                "
+DO $$ BEGIN
+    CREATE TYPE public.gender AS
+        ENUM ('Male','Female','Other');
+        ALTER TYPE public.gender OWNER TO postgres;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+CREATE TABLE IF NOT EXISTS public.accounts (
 	id serial NOT NULL,
 	username varchar(15) NOT NULL,
 	password text NOT NULL,
@@ -50,9 +59,7 @@ impl AccountDatabase for Database {
 );
 
 ALTER TABLE public.accounts OWNER TO postgres;
-CREATE TYPE public.gender AS
-ENUM ('Male','Female','Other');
-ALTER TYPE public.gender OWNER TO postgres;",
+",
             )
             .map_err(|_| KontrollerError::DbTableCreation)?;
 
@@ -67,7 +74,13 @@ ALTER TYPE public.gender OWNER TO postgres;",
             Some(client) => {
                 client
                     .execute(
-                        sql::CREATE_ACCOUNT,
+                        "INSERT INTO accounts (
+                                username,
+                                email,
+                                password,
+                                created
+                              )
+                              VALUES ($1, $2, $3, $4)",
                         &[
                             &account.username,
                             &account.email,
@@ -88,7 +101,14 @@ ALTER TYPE public.gender OWNER TO postgres;",
             Some(client) => {
                 client
                     .execute(
-                        sql::CREATE_ADMIN_ACCOUNT,
+                        "INSERT INTO accounts (
+                                username,
+                                email,
+                                password,
+                                created,
+                                account_type
+                              )
+                              VALUES ($1, $2, $3, $4, $5)",
                         &[
                             &account.username,
                             &account.email,
@@ -113,7 +133,10 @@ ALTER TYPE public.gender OWNER TO postgres;",
         match &mut self.client {
             Some(client) => {
                 let row = client
-                    .query(sql::GET_ACCOUNT_BY_USERNAME, &[&username])
+                    .query(
+                        "SELECT * FROM accounts WHERE username = :username;",
+                        &[&username],
+                    )
                     .map_err(|_| KontrollerError::DbSQL)?;
 
                 if row.is_empty() {
@@ -136,7 +159,7 @@ ALTER TYPE public.gender OWNER TO postgres;",
         match &mut self.client {
             Some(client) => {
                 let row = client
-                    .query(sql::GET_ACCOUNT_BY_EMAIL, &[&email])
+                    .query("SELECT * FROM accounts WHERE email = :email;", &[&email])
                     .map_err(|_| KontrollerError::DbSQL)?;
 
                 if row.is_empty() {
@@ -159,7 +182,7 @@ ALTER TYPE public.gender OWNER TO postgres;",
         match &mut self.client {
             Some(client) => {
                 let row = client
-                    .query(sql::GET_ACCOUNT_BY_EMAIL, &[&email])
+                    .query("SELECT * FROM accounts WHERE email = :email;", &[&email])
                     .map_err(|_| KontrollerError::DbSQL)?;
 
                 if row.is_empty() {
@@ -194,7 +217,10 @@ ALTER TYPE public.gender OWNER TO postgres;",
         match &mut self.client {
             Some(client) => {
                 let row = client
-                    .query(sql::GET_ACCOUNT_BY_USERNAME, &[&username])
+                    .query(
+                        "SELECT * FROM accounts WHERE username = :username;",
+                        &[&username],
+                    )
                     .map_err(|_| KontrollerError::DbSQL)?;
 
                 if row.is_empty() {

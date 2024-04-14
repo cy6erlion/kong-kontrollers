@@ -1,6 +1,6 @@
 //! # 🗄️ Accounts database management
 //!
-use super::{sql, Account, AccountDatabase, PublicAccount};
+use super::{Account, AccountDatabase, PublicAccount};
 use crate::error::KontrollerError;
 use rusqlite::{params, Connection};
 
@@ -66,7 +66,13 @@ impl AccountDatabase for Database {
         match &self.conn {
             Some(conn) => {
                 conn.execute(
-                    sql::CREATE_ACCOUNT,
+                    "INSERT INTO accounts (
+                                username,
+                                email,
+                                password,
+                                created
+                              )
+                              VALUES (?1, ?2, ?3, ?4)",
                     params![
                         &account.username,
                         &account.email,
@@ -86,7 +92,14 @@ impl AccountDatabase for Database {
         match &self.conn {
             Some(conn) => {
                 conn.execute(
-                    sql::CREATE_ADMIN_ACCOUNT,
+                    "INSERT INTO accounts (
+                                username,
+                                email,
+                                password,
+                                created,
+                                account_type
+                              )
+                              VALUES (?1, ?2, ?3, ?4, ?5)",
                     params![
                         &account.username,
                         &account.email,
@@ -111,7 +124,7 @@ impl AccountDatabase for Database {
         match &self.conn {
             Some(conn) => {
                 let mut stmt = conn
-                    .prepare(sql::GET_ACCOUNT_BY_USERNAME)
+                    .prepare("SELECT * FROM accounts WHERE username = :username;")
                     .map_err(|_| KontrollerError::DbSQL)?;
                 let mut rows = stmt
                     .query(&[(":username", username)])
@@ -135,7 +148,7 @@ impl AccountDatabase for Database {
         match &self.conn {
             Some(conn) => {
                 let mut stmt = conn
-                    .prepare(sql::GET_ACCOUNT_BY_EMAIL)
+                    .prepare("SELECT * FROM accounts WHERE email = :email;")
                     .map_err(|_| KontrollerError::DbSQL)?;
                 let mut rows = stmt
                     .query(&[(":email", email)])
@@ -159,7 +172,7 @@ impl AccountDatabase for Database {
         match &self.conn {
             Some(conn) => {
                 let mut stmt = conn
-                    .prepare(sql::GET_ACCOUNT_BY_EMAIL)
+                    .prepare("SELECT * FROM accounts WHERE email = :email;")
                     .map_err(|_| KontrollerError::DbSQL)?;
                 let mut rows = stmt
                     .query(&[(":email", email)])
@@ -195,7 +208,7 @@ impl AccountDatabase for Database {
         match &self.conn {
             Some(conn) => {
                 let mut stmt = conn
-                    .prepare(sql::GET_ACCOUNT_BY_USERNAME)
+                    .prepare("SELECT * FROM accounts WHERE username = :username;")
                     .map_err(|_| KontrollerError::DbSQL)?;
                 let mut rows = stmt
                     .query(&[(":username", username)])
@@ -223,125 +236,3 @@ impl AccountDatabase for Database {
         }
     }
 }
-
-// #[cfg(test)]
-// mod test {
-//     use chrono::Utc;
-
-//     use super::*;
-
-//     const TEST_DB_PATH: &str = "test-data/EUM6O_TEST_DATABASE.sqlite";
-
-//     #[test]
-//     fn connect_db() {
-//         let input = super::KollectionInput {
-//             accounts: Some(TEST_DB_PATH.to_string()),
-//         };
-//         let mut db = Database::new(input);
-
-//         // Connect to database
-//         db.connect().unwrap();
-
-//         match db.accounts.conn {
-//             Some(_conn) => assert!(true),
-//             _ => assert!(false),
-//         }
-//     }
-
-//     #[test]
-//     fn test_store_get_account_account() {
-//         remove_test_db();
-//         let input = super::KollectionInput {
-//             accounts: Some(TEST_DB_PATH.to_string()),
-//         };
-//         let mut db = Database::new(input);
-
-//         let account = Account {
-//             username: String::from("testuszee"),
-//             password: String::from("12345678910"),
-//             created: Utc::now(),
-//             fullname: None,
-//             date_of_birth: None,
-//             id_number: None,
-//             gender: None,
-//             current_school_name: None,
-//             student_number: None,
-//             bussiness_name: None,
-//             email: Some("admin@example.com".to_string()),
-//             mobile_number: None,
-//             website: None,
-//             description: None,
-//             last_login: None,
-//         };
-
-//         db.connect().unwrap();
-//         db.create_account(&account).unwrap();
-
-//         let public_account = db.public_get_account_by_email("admin@example.com").unwrap();
-//         let public_account1 = db.public_get_account_by_username("testuszee").unwrap();
-
-//         if let Some(_) = public_account {
-//             assert!(true)
-//         } else {
-//             panic!("Account not found")
-//         }
-
-//         if let Some(_) = public_account1 {
-//             assert!(true)
-//         } else {
-//             panic!("Account not found")
-//         }
-//     }
-
-//     #[test]
-//     fn test_store_get_account_account_private() {
-//         //remove_test_db();
-//         let input = super::KollectionInput {
-//             accounts: Some(TEST_DB_PATH.to_string()),
-//         };
-//         let mut db = Database::new(input);
-
-//         let account = Account {
-//             username: String::from("testus"),
-//             password: String::from("12345678910"),
-//             created: Utc::now(),
-//             fullname: None,
-//             date_of_birth: None,
-//             id_number: None,
-//             gender: None,
-//             current_school_name: None,
-//             student_number: None,
-//             bussiness_name: None,
-//             email: Some("admin@ple.com".to_string()),
-//             mobile_number: None,
-//             website: None,
-//             description: None,
-//             last_login: None,
-//         };
-
-//         db.connect().unwrap();
-//         db.create_account(&account).unwrap();
-
-//         let public_account = db.private_get_account_by_email("admin@ple.com").unwrap();
-//         let public_account1 = db.private_get_account_by_username("testus").unwrap();
-
-//         if let Some(_) = public_account {
-//             assert!(true)
-//         } else {
-//             panic!("Account not found")
-//         }
-
-//         if let Some(_) = public_account1 {
-//             assert!(true)
-//         } else {
-//             panic!("Account not found")
-//         }
-//     }
-
-//     fn remove_test_db() {
-//         let test_db_path = std::path::Path::new(TEST_DB_PATH);
-//         if std::path::Path::exists(test_db_path) {
-//             std::fs::remove_file(test_db_path).unwrap();
-//         }
-//     }
-// }

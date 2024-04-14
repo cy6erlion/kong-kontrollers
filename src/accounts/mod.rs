@@ -13,7 +13,7 @@ pub mod create;
 pub mod database;
 pub mod inputs;
 
-use chrono::prelude::*;
+use chrono::{Datelike, NaiveDate};
 use inputs::AccountCreationInput;
 use kong::{json, krypto, JsonValue};
 use serde::{Deserialize, Serialize};
@@ -29,11 +29,11 @@ pub struct Account {
     /// Account's master key
     pub password: String,
     /// Date when account was created
-    pub created: DateTime<Utc>,
+    pub created: NaiveDate,
     /// The fullname of the account holder.
     pub fullname: Option<String>,
     /// The date when the account holder was born.
-    pub date_of_birth: Option<DateTime<Utc>>,
+    pub date_of_birth: Option<NaiveDate>,
     /// ID number of the account owner
     pub id_number: Option<String>,
     /// The gender of the account holder
@@ -47,7 +47,7 @@ pub struct Account {
     /// Account owner's web-address
     pub website: Option<String>,
     /// Date account last logged in
-    pub last_login: Option<DateTime<Utc>>,
+    pub last_login: Option<NaiveDate>,
     /// Type of account, eg `admin`
     pub account_type: Option<String>,
 }
@@ -56,20 +56,28 @@ impl From<AccountCreationInput> for Account {
     fn from(input: AccountCreationInput) -> Account {
         let password = krypto::password::hash(&input.password).unwrap();
 
-        Account {
-            username: input.username,
-            password,
-            created: Utc::now(),
-            fullname: None,
-            date_of_birth: None,
-            id_number: None,
-            gender: None,
-            email: input.email,
-            mobile_number: None,
-            website: None,
-            description: None,
-            last_login: None,
-            account_type: None,
+        let current_date = chrono::Utc::now();
+        let year = current_date.year();
+        let month = current_date.month();
+        let day = current_date.day();
+        if let Some(date) = chrono::NaiveDate::from_ymd_opt(year, month, day) {
+            Account {
+                username: input.username,
+                password,
+                created: date,
+                fullname: None,
+                date_of_birth: None,
+                id_number: None,
+                gender: None,
+                email: input.email,
+                mobile_number: None,
+                website: None,
+                description: None,
+                last_login: None,
+                account_type: None,
+            }
+        } else {
+            panic!("Date error");
         }
     }
 }
