@@ -1,56 +1,8 @@
 //! # 🗄️ Accounts database management
 //!
-use super::{Account, AccountDatabase, PublicAccount};
+use super::{sql, Account, AccountDatabase, PublicAccount};
 use crate::error::KontrollerError;
 use rusqlite::{params, Connection};
-
-/// SQL statements and queries
-pub mod sql {
-    /// Create user accounts table
-    pub const CREATE_ACCOUNTS_TABLE: &str = "
-      CREATE TABLE IF NOT EXISTS accounts (
-        id INTEGER PRIMARY KEY,                      -- The Identifier of the account, the Rust Type is `i64`
-        username TEXT UNIQUE NOT NULL,               -- The username of the account
-        password TEXT NOT NULL,                      -- The user's login password
-        created TEXT NOT NULL,                       -- The date when the account was created, the Rust Type is `chrono::DateTime`
-        fullname TEXT,                               -- Fullname of the account
-        date_of_birth TEXT,                          -- The date when the account holder was born
-        id_number TEXT,                              -- ID number of the account owner
-        gender TEXT,                                 -- The gender of the account holder
-        email TEXT UNIQUE,                           -- The email address of the account
-        mobile_number TEXT,                          -- Account owner's mobile number
-        website TEXT,                                -- Account owner's web-address
-        description TEXT,                            -- Short bio of Account
-        last_login TEXT,                              -- Date account last logged in
-        account_type TEXT)                           -- Type of account, eg `admin`";
-
-    /// Get account by username
-    pub const GET_ACCOUNT_BY_USERNAME: &str = "SELECT * FROM accounts WHERE username = :username;";
-
-    /// Get account by email
-    pub const GET_ACCOUNT_BY_EMAIL: &str = "SELECT * FROM accounts WHERE email = :email;";
-
-    /// Insert a account in the accounts table
-    pub const CREATE_ACCOUNT: &str = "
-      INSERT INTO accounts (
-        username,
-        email,
-        password,
-        created
-       )
-      VALUES (?1, ?2, ?3, ?4)";
-
-    /// Insert a admin account in the accounts table
-    pub const CREATE_ADMIN_ACCOUNT: &str = "
-      INSERT INTO accounts (
-        username,
-        email,
-        password,
-        created,
-        account_type
-       )
-      VALUES (?1, ?2, ?3, ?4, ?5)";
-}
 
 /// Database management system
 pub struct Database {
@@ -83,7 +35,22 @@ impl AccountDatabase for Database {
                     .transaction()
                     .map_err(|_| KontrollerError::DbTransaction)?;
 
-                tx.execute(sql::CREATE_ACCOUNTS_TABLE, ())
+                tx.execute("
+      CREATE TABLE IF NOT EXISTS accounts (
+        id INTEGER PRIMARY KEY,                      -- The Identifier of the account, the Rust Type is `i64`
+        username TEXT UNIQUE NOT NULL,               -- The username of the account
+        password TEXT NOT NULL,                      -- The user's login password
+        created TEXT NOT NULL,                       -- The date when the account was created, the Rust Type is `chrono::DateTime`
+        fullname TEXT,                               -- Fullname of the account
+        date_of_birth TEXT,                          -- The date when the account holder was born
+        id_number TEXT,                              -- ID number of the account owner
+        gender TEXT,                                 -- The gender of the account holder
+        email TEXT UNIQUE,                           -- The email address of the account
+        mobile_number TEXT,                          -- Account owner's mobile number
+        website TEXT,                                -- Account owner's web-address
+        description TEXT,                            -- Short bio of Account
+        last_login TEXT,                              -- Date account last logged in
+        account_type TEXT)                           -- Type of account, eg `admin`", ())
                     .map_err(|_| KontrollerError::DbTableCreation)?;
 
                 tx.commit().map_err(|_| KontrollerError::DbTableCreation)?;
@@ -95,7 +62,7 @@ impl AccountDatabase for Database {
     }
 
     /// Create a new account
-    fn create_account(&self, account: &Account) -> Result<(), KontrollerError> {
+    fn create_account(&mut self, account: &Account) -> Result<(), KontrollerError> {
         match &self.conn {
             Some(conn) => {
                 conn.execute(
@@ -115,7 +82,7 @@ impl AccountDatabase for Database {
     }
 
     /// Create a new admin account
-    fn create_admin_account(&self, account: &Account) -> Result<(), KontrollerError> {
+    fn create_admin_account(&mut self, account: &Account) -> Result<(), KontrollerError> {
         match &self.conn {
             Some(conn) => {
                 conn.execute(
@@ -138,7 +105,7 @@ impl AccountDatabase for Database {
 
     /// Get an account's public data by its username
     fn public_get_account_by_username(
-        &self,
+        &mut self,
         username: &str,
     ) -> Result<Option<PublicAccount>, KontrollerError> {
         match &self.conn {
@@ -162,7 +129,7 @@ impl AccountDatabase for Database {
 
     /// Get an account's public data by its email
     fn public_get_account_by_email(
-        &self,
+        &mut self,
         email: &str,
     ) -> Result<Option<PublicAccount>, KontrollerError> {
         match &self.conn {
@@ -186,7 +153,7 @@ impl AccountDatabase for Database {
 
     /// Get an account's private data by its email
     fn private_get_account_by_email(
-        &self,
+        &mut self,
         email: &str,
     ) -> Result<Option<Account>, KontrollerError> {
         match &self.conn {
@@ -222,7 +189,7 @@ impl AccountDatabase for Database {
 
     /// Get an account's private data by its username
     fn private_get_account_by_username(
-        &self,
+        &mut self,
         username: &str,
     ) -> Result<Option<Account>, KontrollerError> {
         match &self.conn {

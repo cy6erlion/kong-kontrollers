@@ -1,401 +1,223 @@
-use super::DatabaseError;
-use crate::data::{Product, ProductDatabaseInput, ID};
-use postgres::Client;
+//! # 🗄️ Accounts database management
+//!
+use super::{sql, Account, AccountDatabase, PublicAccount};
+use crate::error::KontrollerError;
+use postgres::{Client, NoTls};
 
-/// SQL queries for the products database table
-pub struct ProductsSql;
-
-impl ProductsSql {
-    /// Create a new row
-    pub fn create(client: &mut Client, product: ProductDatabaseInput) -> Result<(), DatabaseError> {
-        client
-            .execute(
-                "INSERT INTO public.products (
-                   name,
-                   manufacturer,
-                   barcode,
-                   unit,
-                   weight,
-                   price,
-                   taxable,
-                   description,
-                   images,
-                   sold,
-                   added,
-                   version
-                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);",
-                &[
-                    &product.name,
-                    &product.manufacturer,
-                    &product.barcode,
-                    &product.unit,
-                    &product.weight,
-                    &product.price,
-                    &product.taxable,
-                    &product.description,
-                    &product.images,
-                    &product.sold,
-                    &product.added,
-                    &product.version,
-                ],
-            )
-            .map_err(|_| DatabaseError::SQL)?;
-        Ok(())
-    }
-
-    pub fn read(client: &mut Client, id: ID) -> Result<Option<Product>, DatabaseError> {
-        let row = client
-            .query(
-                "SELECT products.id, name, manufacturer, barcode,
-                        unit, weight, price, taxable, description,
-                        images, sold, added, products.version, category
-                 FROM products
-                 LEFT JOIN product_categories
-                 ON products.id = product_categories.product
-                 WHERE products.id = $1;",
-                &[&id],
-            )
-            .map_err(|_| DatabaseError::SQL)?;
-
-        if row.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(Product {
-                id: row[0].get("id"),
-                name: row[0].get("name"),
-                manufacturer: row[0].get("manufacturer"),
-                barcode: row[0].get("barcode"),
-                unit: row[0].get("unit"),
-                weight: row[0].get("weight"),
-                price: row[0].get("price"),
-                taxable: row[0].get("taxable"),
-                description: row[0].get("description"),
-                images: row[0].get("images"),
-                sold: row[0].get("sold"),
-                category: row[0].get("category"),
-                added: row[0].get("added"),
-                version: row[0].get("version"),
-            }))
-        }
-    }
-
-    pub fn read_all(client: &mut Client) -> Result<Vec<Product>, DatabaseError> {
-        let row = client
-            .query(
-                "SELECT products.id, name, manufacturer, barcode,
-                        unit, weight, price, taxable, description,
-                        images, sold, added, products.version, category
-                 FROM products
-                 LEFT JOIN product_categories
-                 ON products.id = product_categories.product;",
-                &[],
-            )
-            .map_err(|_| DatabaseError::SQL)?;
-        let mut products: Vec<Product> = vec![];
-
-        for r in &row {
-            products.push(Product {
-                id: r.get("id"),
-                name: r.get("name"),
-                manufacturer: r.get("manufacturer"),
-                barcode: r.get("barcode"),
-                unit: r.get("unit"),
-                weight: r.get("weight"),
-                price: r.get("price"),
-                taxable: r.get("taxable"),
-                description: r.get("description"),
-                images: r.get("images"),
-                category: r.get("category"),
-                sold: r.get("sold"),
-                added: r.get("added"),
-                version: r.get("version"),
-            })
-        }
-
-        Ok(products)
-    }
-
-    pub fn read_by_barcode(
-        client: &mut Client,
-        barcode: &str,
-    ) -> Result<Option<Product>, DatabaseError> {
-        let row = client
-            .query(
-                "SELECT products.id, name, manufacturer, barcode,
-                        unit, weight, price, taxable, description,
-                        images, sold, added, products.version, category
-                 FROM products
-                 LEFT JOIN product_categories
-                 ON products.id = product_categories.product
-                 WHERE barcode = $1;",
-                &[&barcode],
-            )
-            .map_err(|_| DatabaseError::SQL)?;
-
-        if row.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(Product {
-                id: row[0].get("id"),
-                name: row[0].get("name"),
-                manufacturer: row[0].get("manufacturer"),
-                barcode: row[0].get("barcode"),
-                unit: row[0].get("unit"),
-                weight: row[0].get("weight"),
-                price: row[0].get("price"),
-                taxable: row[0].get("taxable"),
-                description: row[0].get("description"),
-                images: row[0].get("images"),
-                sold: row[0].get("sold"),
-                category: row[0].get("category"),
-                added: row[0].get("added"),
-                version: row[0].get("version"),
-            }))
-        }
-    }
-
-    pub fn update(
-        client: &mut Client,
-        id: ID,
-        product: &ProductDatabaseInput,
-    ) -> Result<(), DatabaseError> {
-        let mut transaction = client.transaction().map_err(|_| DatabaseError::SQL)?;
-        transaction
-            .execute(
-                "UPDATE public.products SET name = $1 WHERE id = $2",
-                &[&product.name, &id],
-            )
-            .map_err(|_| DatabaseError::SQL)?;
-
-        transaction
-            .execute(
-                "UPDATE public.products SET manufacturer = $1 WHERE id = $2",
-                &[&product.manufacturer, &id],
-            )
-            .map_err(|_| DatabaseError::SQL)?;
-
-        transaction
-            .execute(
-                "UPDATE public.products SET barcode = $1 WHERE id = $2",
-                &[&product.barcode, &id],
-            )
-            .map_err(|_| DatabaseError::SQL)?;
-
-        transaction
-            .execute(
-                "UPDATE public.products SET unit = $1 WHERE id = $2",
-                &[&product.unit, &id],
-            )
-            .map_err(|_| DatabaseError::SQL)?;
-
-        transaction
-            .execute(
-                "UPDATE public.products SET weight = $1 WHERE id = $2",
-                &[&product.weight, &id],
-            )
-            .map_err(|_| DatabaseError::SQL)?;
-
-        transaction
-            .execute(
-                "UPDATE public.products SET price = $1 WHERE id = $2",
-                &[&product.price, &id],
-            )
-            .map_err(|_| DatabaseError::SQL)?;
-
-        transaction
-            .execute(
-                "UPDATE public.products SET taxable = $1 WHERE id = $2",
-                &[&product.taxable, &id],
-            )
-            .map_err(|_| DatabaseError::SQL)?;
-
-        transaction
-            .execute(
-                "UPDATE public.products SET description = $1 WHERE id = $2",
-                &[&product.description, &id],
-            )
-            .map_err(|_| DatabaseError::SQL)?;
-
-        transaction
-            .execute(
-                "UPDATE public.products SET images = $1 WHERE id = $2",
-                &[&product.images, &id],
-            )
-            .map_err(|_| DatabaseError::SQL)?;
-
-        transaction
-            .execute(
-                "UPDATE public.products SET sold = $1 WHERE id = $2",
-                &[&product.sold, &id],
-            )
-            .map_err(|_| DatabaseError::SQL)?;
-
-        transaction
-            .execute(
-                "UPDATE public.products SET added = $1 WHERE id = $2",
-                &[&product.added, &id],
-            )
-            .map_err(|_| DatabaseError::SQL)?;
-
-        transaction
-            .execute(
-                "UPDATE public.products SET version = $1 WHERE id = $2",
-                &[&product.version, &id],
-            )
-            .map_err(|_| DatabaseError::SQL)?;
-
-        transaction.commit().map_err(|_| DatabaseError::SQL)?;
-
-        Ok(())
-    }
-
-    pub fn delete(client: &mut Client, id: ID) -> Result<(), DatabaseError> {
-        client
-            .execute(
-                "DELETE FROM public.product_categories WHERE product = $1",
-                &[&id],
-            )
-            .map_err(|_| DatabaseError::SQL)?;
-
-        client
-            .execute("DELETE FROM public.products WHERE id = $1", &[&id])
-            .map_err(|_| DatabaseError::SQL)?;
-
-        Ok(())
-    }
+/// Database management system
+pub struct Database {
+    /// Database file path
+    path: String,
+    /// An Postgres connection handle
+    client: Option<Client>,
 }
 
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::config::Config;
-    use crate::database::Database;
-    use chrono::Datelike;
-
-    #[test]
-    fn test_create_read() {
-        let config = Config::from_file("example-config.toml").unwrap();
-        let db = Database::new(
-            &config.database_name,
-            &config.database_user,
-            &config.database_password,
-        )
-        .unwrap();
-
-        let current_date = chrono::Utc::now();
-        let year = current_date.year();
-        let month = current_date.month();
-        let day = current_date.day();
-
-        if let Some(date) = chrono::NaiveDate::from_ymd_opt(year, month, day) {
-            let product = ProductDatabaseInput {
-                name: "Iphone 15".to_string(),
-                manufacturer: "Apple".to_string(),
-                barcode: "kdfjdfkdfkdfjdfkj".to_string(),
-                unit: Some("grams".to_string()),
-                weight: None,
-                price: None,
-                taxable: Some(false),
-                description: "Smart phone".to_string(),
-                images: "".to_string(),
-                sold: false,
-                added: date,
-                version: 0,
-            };
-
-            if let Some(mut client) = db.client {
-                super::ProductsSql::create(&mut client, product.clone()).unwrap();
-                let product1 =
-                    super::ProductsSql::read_by_barcode(&mut client, &product.barcode).unwrap();
-
-                if let Some(product1) = product1 {
-                    assert_eq!(product.name, product1.name);
-
-                    if let Some(product2) =
-                        super::ProductsSql::read(&mut client, product1.id).unwrap()
-                    {
-                        assert_eq!(product.name, product2.name);
-                        assert_eq!(product1, product2);
-                    }
-                } else {
-                    panic!("Product not found");
-                }
-            } else {
-                panic!("woop");
-            }
-        } else {
-            panic!("Date error");
+impl AccountDatabase for Database {
+    /// Create a new database controller
+    fn new(path: &str) -> Self {
+        Database {
+            path: path.to_string(),
+            client: None,
         }
     }
 
-    #[test]
-    fn test_update_delete() {
-        let config = Config::from_file("example-config.toml").unwrap();
-        let db = Database::new(
-            &config.database_name,
-            &config.database_user,
-            &config.database_password,
-        )
-        .unwrap();
+    /// Open Postgres connection, create tables
+    fn connect(&mut self) -> Result<(), KontrollerError> {
+        // Open database connection
+        let mut client =
+            Client::connect(&self.path, NoTls).map_err(|_| KontrollerError::DbConnection)?;
 
-        let current_date = chrono::Utc::now();
-        let year = current_date.year();
-        let month = current_date.month();
-        let day = current_date.day();
+        client
+            .batch_execute(
+                "CREATE TABLE IF NOT EXISTS public.accounts (
+	id serial NOT NULL,
+	username varchar(15) NOT NULL,
+	password text NOT NULL,
+	created date NOT NULL,
+	fullname varchar(50),
+	date_of_birth date,
+	id_number varchar(100),
+	gender public.gender,
+	description varchar(200),
+	email varchar(320),
+	mobile_number varchar(15),
+	website varchar(2048),
+	last_login date,
+	account_type varchar(50),
+	CONSTRAINT \"Account id is a PRIMARY KEY\" PRIMARY KEY (id),
+	CONSTRAINT \"Account ID is UNIQUE\" UNIQUE (id),
+	CONSTRAINT \"Account username is UNIQUE\" UNIQUE (username)
+);
 
-        if let Some(date) = chrono::NaiveDate::from_ymd_opt(year, month, day) {
-            let product = ProductDatabaseInput {
-                name: "Iphone 12".to_string(),
-                manufacturer: "Apple".to_string(),
-                barcode: "wdjfkasfhd7afd,df".to_string(),
-                unit: Some("grams".to_string()),
-                weight: None,
-                price: None,
-                taxable: Some(false),
-                description: "Smart phone".to_string(),
-                images: "".to_string(),
-                sold: false,
-                added: date,
-                version: 0,
-            };
+ALTER TABLE public.accounts OWNER TO postgres;
+CREATE TYPE public.gender AS
+ENUM ('Male','Female','Other');
+ALTER TYPE public.gender OWNER TO postgres;",
+            )
+            .map_err(|_| KontrollerError::DbTableCreation)?;
 
-            let product_update = ProductDatabaseInput {
-                name: "Iphone 11".to_string(),
-                manufacturer: "Apple".to_string(),
-                barcode: "wdjfkasfhd7afd,df".to_string(),
-                unit: Some("grams".to_string()),
-                weight: None,
-                price: None,
-                taxable: Some(false),
-                description: "Smart phone".to_string(),
-                images: "".to_string(),
-                sold: false,
-                added: date,
-                version: 0,
-            };
+        self.client = Some(client);
 
-            if let Some(mut client) = db.client {
-                super::ProductsSql::create(&mut client, product.clone()).unwrap();
-                super::ProductsSql::update(&mut client, 1, &product_update.clone()).unwrap();
-                if let Some(updated) =
-                    super::ProductsSql::read_by_barcode(&mut client, &product_update.barcode)
-                        .unwrap()
-                {
-                    assert_eq!(product_update.name, updated.name);
+        Ok(())
+    }
 
-                    // delete product
-                    super::ProductsSql::delete(&mut client, updated.id).unwrap();
-                    let deleted_product =
-                        super::ProductsSql::read(&mut client, updated.id).unwrap();
-                    assert_eq!(deleted_product, None);
-                } else {
-                    panic!("tring");
-                }
-            } else {
-                panic!("woop");
+    /// Create a new account
+    fn create_account(&mut self, account: &Account) -> Result<(), KontrollerError> {
+        match &mut self.client {
+            Some(client) => {
+                client
+                    .execute(
+                        sql::CREATE_ACCOUNT,
+                        &[
+                            &account.username,
+                            &account.email,
+                            &account.password,
+                            &account.created,
+                        ],
+                    )
+                    .map_err(|_| KontrollerError::DbField)?;
+                Ok(())
             }
-        } else {
-            panic!("Error");
+            None => Err(KontrollerError::DbConnection),
+        }
+    }
+
+    /// Create a new admin account
+    fn create_admin_account(&mut self, account: &Account) -> Result<(), KontrollerError> {
+        match &mut self.client {
+            Some(client) => {
+                client
+                    .execute(
+                        sql::CREATE_ADMIN_ACCOUNT,
+                        &[
+                            &account.username,
+                            &account.email,
+                            &account.password,
+                            &account.created,
+                            &account.account_type,
+                        ],
+                    )
+                    .map_err(|_| KontrollerError::DbField)?;
+
+                Ok(())
+            }
+            None => Err(KontrollerError::DbConnection),
+        }
+    }
+
+    /// Get an account's public data by its username
+    fn public_get_account_by_username(
+        &mut self,
+        username: &str,
+    ) -> Result<Option<PublicAccount>, KontrollerError> {
+        match &mut self.client {
+            Some(client) => {
+                let row = client
+                    .query(sql::GET_ACCOUNT_BY_USERNAME, &[&username])
+                    .map_err(|_| KontrollerError::DbSQL)?;
+
+                if row.is_empty() {
+                    Ok(None)
+                } else {
+                    Ok(Some(PublicAccount {
+                        username: row[0].get("username"),
+                    }))
+                }
+            }
+            None => Err(KontrollerError::DbConnection),
+        }
+    }
+
+    /// Get an account's public data by its email
+    fn public_get_account_by_email(
+        &mut self,
+        email: &str,
+    ) -> Result<Option<PublicAccount>, KontrollerError> {
+        match &mut self.client {
+            Some(client) => {
+                let row = client
+                    .query(sql::GET_ACCOUNT_BY_EMAIL, &[&email])
+                    .map_err(|_| KontrollerError::DbSQL)?;
+
+                if row.is_empty() {
+                    Ok(None)
+                } else {
+                    Ok(Some(PublicAccount {
+                        username: row[0].get("username"),
+                    }))
+                }
+            }
+            None => Err(KontrollerError::DbConnection),
+        }
+    }
+
+    /// Get an account's private data by its email
+    fn private_get_account_by_email(
+        &mut self,
+        email: &str,
+    ) -> Result<Option<Account>, KontrollerError> {
+        match &mut self.client {
+            Some(client) => {
+                let row = client
+                    .query(sql::GET_ACCOUNT_BY_EMAIL, &[&email])
+                    .map_err(|_| KontrollerError::DbSQL)?;
+
+                if row.is_empty() {
+                    Ok(None)
+                } else {
+                    Ok(Some(Account {
+                        username: row[0].get("username"),
+                        password: row[0].get("password"),
+                        created: row[0].get("created"),
+                        fullname: row[0].get("fullname"),
+                        date_of_birth: row[0].get("date_of_birth"),
+                        id_number: row[0].get("id_number"),
+                        gender: row[0].get("gender"),
+                        email: row[0].get("email"),
+                        mobile_number: row[0].get("mobile_number"),
+                        website: row[0].get("website"),
+                        description: row[0].get("description"),
+                        last_login: row[0].get("last_login"),
+                        account_type: row[0].get("account_type"),
+                    }))
+                }
+            }
+            None => Err(KontrollerError::DbConnection),
+        }
+    }
+
+    /// Get an account's private data by its username
+    fn private_get_account_by_username(
+        &mut self,
+        username: &str,
+    ) -> Result<Option<Account>, KontrollerError> {
+        match &mut self.client {
+            Some(client) => {
+                let row = client
+                    .query(sql::GET_ACCOUNT_BY_USERNAME, &[&username])
+                    .map_err(|_| KontrollerError::DbSQL)?;
+
+                if row.is_empty() {
+                    Ok(None)
+                } else {
+                    Ok(Some(Account {
+                        username: row[0].get("username"),
+                        password: row[0].get("password"),
+                        created: row[0].get("created"),
+                        fullname: row[0].get("fullname"),
+                        date_of_birth: row[0].get("date_of_birth"),
+                        id_number: row[0].get("id_number"),
+                        gender: row[0].get("gender"),
+                        email: row[0].get("email"),
+                        mobile_number: row[0].get("mobile_number"),
+                        website: row[0].get("website"),
+                        description: row[0].get("description"),
+                        last_login: row[0].get("last_login"),
+                        account_type: row[0].get("account_type"),
+                    }))
+                }
+            }
+            None => Err(KontrollerError::DbConnection),
         }
     }
 }
