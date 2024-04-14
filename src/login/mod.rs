@@ -87,47 +87,6 @@ impl<D: AccountDatabase> LoginKontroller<D> {
             Err(_) => ErrorResponse::internal(),
         }
     }
-
-    // TODO: add error handling
-    /// check if user is admin
-    pub fn is_admin(&self, kong: &Kong) -> bool {
-        if let Some(kpassport) = &kong.kpassport {
-            // get admin from database
-            let admin_email = if let Some(admin_email) = &kong.config.admin_email {
-                admin_email.clone()
-            } else {
-                // admin email not set
-                return false;
-            };
-
-            if let Ok(admin_account) = self
-                .database
-                .lock()
-                .unwrap()
-                .private_get_account_by_email(&admin_email)
-            {
-                if let Some(admin_account) = admin_account {
-                    // check if admin account username matches the username is the kpassport
-                    if admin_account.username == kpassport.content.username {
-                        // user is admin
-                        true
-                    } else {
-                        // user is not admin
-                        false
-                    }
-                } else {
-                    // Admin account not found, for some reason. Cannot check if user is admin
-                    false
-                }
-            } else {
-                // Could not get admin account from database
-                false
-            }
-        } else {
-            // No kpassport found (user not logged in), cannot check if user is admin
-            false
-        }
-    }
 }
 
 impl<D: AccountDatabase> Kontrol for LoginKontroller<D> {
@@ -205,7 +164,7 @@ impl<D: AccountDatabase> Kontrol for LoginKontroller<D> {
                                         )
                                     } else {
                                         // Wrong password provided
-                                        ErrorResponse::bad_request()
+                                        ErrorResponse::unauthorized()
                                     }
                                 }
                                 Err(_) => ErrorResponse::internal(),
