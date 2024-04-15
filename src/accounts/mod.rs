@@ -36,8 +36,6 @@ pub struct Account {
     pub date_of_birth: Option<NaiveDate>,
     /// ID number of the account owner
     pub id_number: Option<String>,
-    /// The gender of the account holder
-    pub gender: Option<String>,
     /// Short bio of Account
     pub description: Option<String>,
     /// User's email address
@@ -68,7 +66,6 @@ impl From<AccountCreationInput> for Account {
                 fullname: None,
                 date_of_birth: None,
                 id_number: None,
-                gender: None,
                 email: input.email,
                 mobile_number: None,
                 website: None,

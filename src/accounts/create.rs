@@ -12,7 +12,7 @@
 //! database with it's `account_type` field as `admin`, from this
 //! you can build up your own higher level abstractions.
 
-use super::database::AccountDatabase;
+use super::database::{DB_Type, Database};
 use super::{Account, AccountCreationInput, PublicAccount};
 use crate::error::KontrollerError;
 use kong::{inputs::UserInput, server, ErrorResponse, JsonValue, Kong, Kontrol, Method};
@@ -20,16 +20,15 @@ use std::sync::{Arc, Mutex};
 
 /// ## ✨ Accounts creation kontroller
 /// Can be used to create both admin and non-admin accounts
-pub struct CreateAccountKontroller<D: AccountDatabase> {
+pub struct CreateAccountKontroller {
     /// Address to kontroller (url path)
     pub address: String,
     /// HTTP method supported by the kontroller
     pub method: Method,
-    /// SQLite database handle
-    pub database: Arc<Mutex<D>>,
+    pub database: DB_Type,
 }
 
-impl<D: AccountDatabase> Kontrol for CreateAccountKontroller<D> {
+impl Kontrol for CreateAccountKontroller {
     /// kontroller address
     fn address(&self) -> String {
         self.address.clone()
@@ -83,11 +82,14 @@ impl<D: AccountDatabase> Kontrol for CreateAccountKontroller<D> {
             match input {
                 Ok(input) => {
                     let mut account: Account = input.clone().into();
+                    let mut dc = self.database.lock().unwrap();
 
                     // create admin account
                     if input.email == kong.config.admin_email {
                         account.account_type = Some("admin".to_string());
-                        match self.database.lock().unwrap().create_admin_account(&account) {
+                        let res = Database::create_admin_account(&mut dc, &account);
+
+                        match res {
                             Ok(_) => {
                                 let public_account: PublicAccount = account.into();
                                 server::Response::json(&public_account).with_status_code(201)
@@ -98,8 +100,10 @@ impl<D: AccountDatabase> Kontrol for CreateAccountKontroller<D> {
                             },
                         }
                     } else {
+                        let res = Database::create_account(&mut dc, &account);
+
                         // Create normal account
-                        match self.database.lock().unwrap().create_account(&account) {
+                        match res {
                             Ok(_) => {
                                 let public_account: PublicAccount = account.into();
                                 server::Response::json(&public_account).with_status_code(201)

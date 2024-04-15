@@ -13,25 +13,23 @@
 //! `accounts` kontroller.
 pub mod inputs;
 
-use crate::accounts::{database::AccountDatabase, Account};
+use crate::accounts::database::{DB_Type, Database};
+use crate::accounts::Account;
 use crate::error::KontrollerError;
 use inputs::AccountLoginInput;
 use kong::krypto::kpassport::Kpassport;
 use kong::{inputs::UserInput, krypto, server, ErrorResponse, JsonValue, Kong, Kontrol, Method};
+#[cfg(feature = "postgres")]
+use postgres::Client;
+#[cfg(feature = "sqlite")]
+use rusqlite::Connection;
 use serde::Serialize;
-use std::sync::{Arc, Mutex};
 
-pub fn is_admin<D: AccountDatabase>(
-    k: &Kpassport,
-    db: Arc<Mutex<D>>,
-) -> Result<bool, KontrollerError> {
+pub fn is_admin(k: &Kpassport, dc: DB_Type) -> Result<bool, KontrollerError> {
     let username = &k.content.username;
+    let mut dc = dc.lock().unwrap();
 
-    // Find user account in database
-    let account = db
-        .lock()
-        .unwrap()
-        .private_get_account_by_username(&username);
+    let account = Database::private_get_account_by_username(&mut dc, &username);
 
     match account {
         // check account result
@@ -52,13 +50,13 @@ pub fn is_admin<D: AccountDatabase>(
 }
 
 /// Login accounts API endpoint handler
-pub struct LoginKontroller<D: AccountDatabase> {
+pub struct LoginKontroller {
     pub address: String,
     pub method: Method,
-    pub database: Arc<Mutex<D>>,
+    pub database: DB_Type,
 }
 
-impl<D: AccountDatabase> LoginKontroller<D> {
+impl LoginKontroller {
     /// Issue kpassport using an HTTP cookie
     fn cookie_auth(
         account: Account,
@@ -89,7 +87,7 @@ impl<D: AccountDatabase> LoginKontroller<D> {
     }
 }
 
-impl<D: AccountDatabase> Kontrol for LoginKontroller<D> {
+impl Kontrol for LoginKontroller {
     /// Endpoint's address
     fn address(&self) -> String {
         self.address.clone()
@@ -139,12 +137,9 @@ impl<D: AccountDatabase> Kontrol for LoginKontroller<D> {
 
             // check if user input is Ok
             if let Ok(input) = input {
+                let mut dc = self.database.lock().unwrap();
                 // Find user account in database
-                let account = self
-                    .database
-                    .lock()
-                    .unwrap()
-                    .private_get_account_by_username(&input.username);
+                let account = Database::private_get_account_by_username(&mut dc, &input.username);
 
                 match account {
                     // check account result
@@ -156,7 +151,7 @@ impl<D: AccountDatabase> Kontrol for LoginKontroller<D> {
                                 Ok(password_verification) => {
                                     if password_verification {
                                         // Password correct, create cookie based sessions
-                                        LoginKontroller::<D>::cookie_auth(
+                                        LoginKontroller::cookie_auth(
                                             account,
                                             &kong.config.hostname,
                                             &kong.config.secret_key,
