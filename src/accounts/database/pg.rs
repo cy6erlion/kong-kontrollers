@@ -34,7 +34,7 @@ ALTER TABLE public.accounts OWNER TO {db_owner};
 "
         );
         client
-            .batch_execute(sql)
+            .batch_execute(&sql)
             .map_err(|_| KontrollerError::DbTableCreation)?;
 
         Ok(())
