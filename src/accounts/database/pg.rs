@@ -9,11 +9,9 @@ pub struct Database;
 
 impl Database {
     /// Initialize accounts table
-    pub fn init(client: &mut Client) -> Result<(), KontrollerError> {
-        client
-            .batch_execute(
-                "
-CREATE TABLE IF NOT EXISTS public.accounts (
+    pub fn init(client: &mut Client, db_owner: &str) -> Result<(), KontrollerError> {
+        let sql = format!(
+            "CREATE TABLE IF NOT EXISTS public.accounts (
 	id serial NOT NULL,
 	username varchar(15) NOT NULL,
 	password text NOT NULL,
@@ -32,9 +30,11 @@ CREATE TABLE IF NOT EXISTS public.accounts (
 	CONSTRAINT \"Account username is UNIQUE\" UNIQUE (username)
 );
 
-ALTER TABLE public.accounts OWNER TO postgres;
-",
-            )
+ALTER TABLE public.accounts OWNER TO {db_owner};
+"
+        );
+        client
+            .batch_execute(sql)
             .map_err(|_| KontrollerError::DbTableCreation)?;
 
         Ok(())
