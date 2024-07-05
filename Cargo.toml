@@ -13,7 +13,7 @@ sqlite = ["dep:rusqlite"]
 postgres = ["dep:postgres"]
 
 [dependencies]
-kong = { git = "https://gitlab.com/kwatafana/infra/kong.git"}
+kong = { git = "https://github.com/seestem/kong.git"}
 serde = { version = "1.0.144", features = ["derive"] } # A generic serialization/deserialization framework
 rusqlite = { version = "0.31.0", features = ["bundled", "chrono"], optional = true} #  Ergonomic wrapper for SQLite
 chrono = { version = "0.4.23", features = ["serde"]} # Date and time library
